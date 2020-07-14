@@ -14,18 +14,21 @@ class ItemsModel {
         this.itemName,
         this.itemPrice,
         this.photoUrl,
+        this.qty
     });
 
     int id;
     String itemName;
     int itemPrice;
     String photoUrl;
+    int qty;
 
     factory ItemsModel.fromJson(Map<String, dynamic> json) => ItemsModel(
         id: json["id"] == null ? null : json["id"],
         itemName: json["item_name"] == null ? null : json["item_name"],
         itemPrice: json["item_price"] == null ? null : json["item_price"],
         photoUrl: json["photo_url"] == null ? null : json["photo_url"],
+        qty: 0,
     );
 
     Map<String, dynamic> toJson() => {
@@ -33,5 +36,6 @@ class ItemsModel {
         "item_name": itemName == null ? null : itemName,
         "item_price": itemPrice == null ? null : itemPrice,
         "photo_url": photoUrl == null ? null : photoUrl,
+        "qty": qty
     };
 }

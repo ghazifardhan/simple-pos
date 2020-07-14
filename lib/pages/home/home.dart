@@ -31,6 +31,7 @@ class _HomeState extends State<Home> {
     return Scaffold(
       appBar: new AppBar(
         title: new Text("Dagangin"),
+        centerTitle: true,
       ),
       body: _children[currentIndex],
       bottomNavigationBar: new BottomNavigationBar(

@@ -5,6 +5,10 @@ import 'package:ghazi_pos/blocs/item_bloc/item_bloc.dart';
 import 'package:ghazi_pos/blocs/item_bloc/item_event.dart';
 import 'package:ghazi_pos/blocs/item_bloc/item_state.dart';
 import 'package:ghazi_pos/pages/items/create_edit_items.dart';
+import 'package:ghazi_pos/widgets/item.dart';
+
+import '../../models/items.dart';
+import '../../models/items.dart';
 
 class Items extends StatefulWidget {
   @override
@@ -31,78 +35,62 @@ class _ItemsState extends State<Items> {
       body: Container(
         child: BlocProvider<ItemBloc>(
           create: (context) => _itemBloc,
-          child: BlocBuilder<ItemBloc, ItemState>(
-            builder: (context, state) {
-              if (state is ItemUninitializedState) {
-                return Center(
-                  child: CircularProgressIndicator(),
-                );
-              } else if (state is ItemInitiliazedState) {
-                return Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: ListView.separated(
-                    itemCount: state.data.length, 
-                    separatorBuilder: (BuildContext context, int index) { 
-                      return SizedBox(height: 10.0);
-                    },
-                    itemBuilder: (BuildContext context, int index) {  
-                      return Material(
-                        elevation: 1.0,
-                        borderRadius: BorderRadius.circular(5.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xffe8e8e8),
-                            borderRadius: BorderRadius.circular(5.0)
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
+          child: BlocListener<ItemBloc, ItemState>(
+            listener: (context, state) {
+              if (state is ItemPostDoneState) {
+                _itemBloc..add(GetItemEvent());
+              }
+            },
+            child: BlocBuilder<ItemBloc, ItemState>(
+              builder: (context, state) {
+                if (state is ItemUninitializedState) {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                } else if (state is ItemInitiliazedState) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        await Future.delayed(Duration(seconds: 1), () {
+                          _itemBloc..add(GetItemEvent());
+                        });
+                      },
+                      child: Stack(
+                        children: <Widget>[
+                          ListView(
                             children: <Widget>[
-                              ClipRRect(
-                                borderRadius: BorderRadius.only(
-                                  bottomLeft: Radius.circular(5.0),
-                                  topLeft: Radius.circular(5.0)
-                                ),
-                                child: Image.network(
-                                  "https://cdns.klimg.com/merdeka.com/i/w/news/2019/03/01/1056184/540x270/cara-sederhana-menanam-bawang-merah-di-rumah.jpg",
-                                  width: 75,
-                                  height: 75,
-                                  fit: BoxFit.cover,
-                                  filterQuality: FilterQuality.low,
-                                ),
-                              ),
-                              SizedBox(width: 5.0,),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Text(
-                                        state.data[index].itemName,
-                                      ),
-                                      Text(
-                                        "${itemPrice(state.data[index].itemPrice)}",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              )
+                              Text("")
                             ],
                           ),
-                        ),
-                      );
-                    }, 
-                  ),
-                );
-              }
-              return Text("Kosong");
-            },
+
+                          ListView(
+                            physics: AlwaysScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            children: <Widget>[
+                              SizedBox(height: 20.0),
+                              ListView.separated(
+                                physics: NeverScrollableScrollPhysics(),
+                                shrinkWrap: true,
+                                itemCount: state.data.length, 
+                                separatorBuilder: (BuildContext context, int index) { 
+                                  return SizedBox(height: 10.0);
+                                },
+                                itemBuilder: (BuildContext context, int index) {  
+                                  return itemContainer(state.data[index]);
+                                }, 
+                              ),
+                              SizedBox(height: 20.0),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return Text("Kosong");
+              },
+            ),
           ),
         ),
       ),
@@ -127,18 +115,54 @@ class _ItemsState extends State<Items> {
     );
   }
 
-  String itemPrice(int itemPrice) {
-    FlutterMoneyFormatter fmf = FlutterMoneyFormatter(
-        amount: itemPrice.toDouble(),
-        settings: MoneyFormatterSettings(
-          symbol: 'Rp',
-          thousandSeparator: '.',
-          decimalSeparator: ',',
-          symbolAndNumberSeparator: ' ',
-          fractionDigits: 0,
-        )
+  Widget itemContainer(ItemsModel data) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context, 
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (BuildContext context) => BlocProvider.value(
+              value: _itemBloc,
+              child: CreateEditItems(
+                create: false,
+                data: data,
+              ),
+            )
+          )
+        );
+      },
+      onLongPress: () {
+        _showDeleteDialog(data);
+      },
+      child: Item(data: data)
     );
-
-    return fmf.output.symbolOnLeft.toString();
   }
-}
+
+  void _showDeleteDialog(ItemsModel data) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(data.itemName),
+          content: Text("Apakah anda yakin ingin menghapus barang ini?"),
+          actions: <Widget>[
+            new FlatButton(
+              onPressed: () {
+                Navigator.pop(context);
+              }, 
+              child: Text("Tidak")
+            ),
+            new FlatButton(
+              onPressed: () {
+                _itemBloc..add(DeleteItemEvent(itemId: data.id));
+                Navigator.pop(context);
+              }, 
+              child: Text("Ya")
+            ),
+          ],
+        );
+      },
+    );
+  }
+} 
